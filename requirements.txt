@@ -8,6 +8,6 @@ passlib[bcrypt]
 bcrypt==3.2.2
 python-multipart
 python-dotenv
-google-genai
-pypdf
+groq
+pdfplumber
 python-docx

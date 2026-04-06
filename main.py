@@ -7,6 +7,7 @@ from hr.router import router as hr_router
 from jobs.router import router as jobs_router
 from applications.router import router as applications_router
 from admin.router import router as admin_router
+from ai.router import router as ai_router
 
 app = FastAPI(
     title="AI-Powered HR Recruitment Portal",
@@ -28,6 +29,7 @@ app.include_router(hr_router)
 app.include_router(jobs_router)
 app.include_router(applications_router)
 app.include_router(admin_router)
+app.include_router(ai_router)
 
 
 @app.get("/", tags=["Health"])

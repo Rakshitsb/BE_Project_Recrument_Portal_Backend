@@ -2,10 +2,18 @@ import io
 
 import docx
 import pdfplumber
+from bson import ObjectId
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 
 from ai_services.resume_parser import parse_resume
+from ai_services.cover_letter_generator import generate_cover_letter
+from database import get_database
 from middleware.auth_guard import require_candidate
+
+
+class CoverLetterRequest(BaseModel):
+    job_id: str
 
 router = APIRouter(prefix="/ai", tags=["AI Services"])
 
@@ -69,3 +77,43 @@ async def parse_resume_route(
         )
 
     return await parse_resume(text)
+
+
+@router.post("/generate-cover-letter")
+async def generate_cover_letter_route(
+    request: CoverLetterRequest,
+    current_user: dict = Depends(require_candidate),
+) -> dict:
+    candidate_id = current_user["_id"]
+    db = await get_database()
+
+    profile = await db["candidate_profiles"].find_one({"user_id": candidate_id})
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate profile not found. Please complete your profile first.",
+        )
+
+    job = await db["jobs"].find_one({"_id": ObjectId(request.job_id)})
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    hr_profile = await db["hr_profiles"].find_one({"user_id": job["hr_id"]})
+    company_name = hr_profile.get("company_name", "the company") if hr_profile else "the company"
+
+    candidate_profile = {
+        "full_name": profile.get("full_name"),
+        "skills": profile.get("skills", []),
+        "experience_years": profile.get("experience_years", 0),
+        "education": profile.get("education"),
+        "bio": profile.get("bio"),
+    }
+
+    job_data = {
+        "title": job.get("title"),
+        "description": job.get("description"),
+        "required_skills": job.get("required_skills", []),
+        "company_name": company_name,
+    }
+
+    return await generate_cover_letter(candidate_profile, job_data)

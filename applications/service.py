@@ -8,6 +8,7 @@ from applications.schemas import ApplicationCreate, ApplicationStatusUpdate, App
 
 APPS = "applications"
 JOBS = "jobs"
+HR_PROFILES = "hr_profiles"
 
 
 def _oid(id_str: str) -> ObjectId:
@@ -17,16 +18,28 @@ def _oid(id_str: str) -> ObjectId:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid ID format")
 
 
-def _to_response(doc: dict) -> ApplicationResponse:
+def _to_response(doc: dict, job: dict | None = None, hr_profile: dict | None = None) -> ApplicationResponse:
     return ApplicationResponse(
         id=str(doc["_id"]),
         job_id=doc["job_id"],
         candidate_id=doc["candidate_id"],
+        job_title=job.get("title") if job else None,
+        company_name=hr_profile.get("company_name") if hr_profile else None,
+        location=job.get("location") if job else None,
+        salary_range=job.get("salary_range") if job else None,
         cover_letter=doc.get("cover_letter"),
         status=doc["status"],
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
     )
+
+
+async def _build_application_response(db, doc: dict) -> ApplicationResponse:
+    job = await db[JOBS].find_one({"_id": _oid(doc["job_id"])})
+    hr_profile = None
+    if job and job.get("hr_id"):
+        hr_profile = await db[HR_PROFILES].find_one({"user_id": job["hr_id"]})
+    return _to_response(doc, job=job, hr_profile=hr_profile)
 
 
 async def create_application(candidate_id: str, data: ApplicationCreate) -> ApplicationResponse:
@@ -51,13 +64,17 @@ async def create_application(candidate_id: str, data: ApplicationCreate) -> Appl
     }
     result = await db[APPS].insert_one(doc)
     doc["_id"] = result.inserted_id
-    return _to_response(doc)
+    hr_profile = await db[HR_PROFILES].find_one({"user_id": job["hr_id"]})
+    return _to_response(doc, job=job, hr_profile=hr_profile)
 
 
 async def get_my_applications(candidate_id: str) -> list[ApplicationResponse]:
     db = get_database()
     cursor = db[APPS].find({"candidate_id": candidate_id})
-    return [_to_response(doc) async for doc in cursor]
+    responses = []
+    async for doc in cursor:
+        responses.append(await _build_application_response(db, doc))
+    return responses
 
 
 async def get_job_applications(job_id: str, hr_id: str) -> list[ApplicationResponse]:
@@ -66,7 +83,11 @@ async def get_job_applications(job_id: str, hr_id: str) -> list[ApplicationRespo
     if not job or job.get("hr_id") != hr_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized")
     cursor = db[APPS].find({"job_id": job_id})
-    return [_to_response(doc) async for doc in cursor]
+    hr_profile = await db[HR_PROFILES].find_one({"user_id": hr_id})
+    responses = []
+    async for doc in cursor:
+        responses.append(_to_response(doc, job=job, hr_profile=hr_profile))
+    return responses
 
 
 async def update_application_status(
@@ -86,7 +107,8 @@ async def update_application_status(
         {"$set": {"status": data.status, "updated_at": datetime.now(timezone.utc)}},
         return_document=True,
     )
-    return _to_response(updated)
+    hr_profile = await db[HR_PROFILES].find_one({"user_id": hr_id})
+    return _to_response(updated, job=job, hr_profile=hr_profile)
 
 
 async def withdraw_application(app_id: str, candidate_id: str) -> dict:

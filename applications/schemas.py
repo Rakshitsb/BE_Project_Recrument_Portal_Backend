@@ -25,6 +25,10 @@ class ApplicationResponse(BaseModel):
     id: str
     job_id: str
     candidate_id: str
+    job_title: str | None = None
+    company_name: str | None = None
+    location: str | None = None
+    salary_range: str | None = None
     cover_letter: str | None = None
     status: ApplicationStatus = ApplicationStatus.applied
     created_at: datetime

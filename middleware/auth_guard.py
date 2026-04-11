@@ -6,9 +6,33 @@ from auth.utils import decode_access_token
 from database import get_database
 
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def get_current_user_optional(credentials: HTTPAuthorizationCredentials = Depends(security_optional)) -> dict | None:
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = decode_access_token(token)
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        role: str = payload.get("role")
+
+        db = get_database()
+        user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return None
+
+        return {"id": str(user["_id"]), "email": user["email"], "role": role}
+    except Exception:
+        return None
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
     token = credentials.credentials
 
     payload = decode_access_token(token)
@@ -35,9 +59,10 @@ def _require_role(role: str):
                 detail="Access forbidden",
             )
         return current_user
+
     return guard
 
 
 require_candidate = _require_role("candidate")
-require_hr        = _require_role("hr")
-require_admin     = _require_role("admin")
+require_hr = _require_role("hr")
+require_admin = _require_role("admin")

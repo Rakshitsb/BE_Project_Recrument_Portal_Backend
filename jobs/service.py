@@ -54,16 +54,23 @@ def _object_id(job_id: str) -> ObjectId:
 
 async def create_job(hr_id: str, data: JobCreate) -> JobResponse:
     db = get_database()
-    doc = {"hr_id": hr_id, "created_at": datetime.now(timezone.utc), **data.model_dump()}
+    doc = {
+        "hr_id": hr_id,
+        "created_at": datetime.now(timezone.utc),
+        **data.model_dump(),
+    }
     result = await db[COLLECTION].insert_one(doc)
     doc["_id"] = result.inserted_id
     hr_profile = await db[HR_PROFILES].find_one({"user_id": hr_id})
     return _to_response(doc, hr_profile=hr_profile)
 
 
-async def get_all_jobs() -> list[JobResponse]:
+async def get_all_jobs(hr_id: str | None = None) -> list[JobResponse]:
     db = get_database()
-    cursor = db[COLLECTION].find({"is_active": True})
+    query = {"is_active": True}
+    if hr_id:
+        query["hr_id"] = hr_id
+    cursor = db[COLLECTION].find(query)
     responses = []
     async for doc in cursor:
         hr_profile = await db[HR_PROFILES].find_one({"user_id": doc["hr_id"]})
@@ -88,7 +95,9 @@ async def update_job(job_id: str, hr_id: str, data: JobUpdate) -> JobResponse:
     if not doc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Job not found")
     if doc["hr_id"] != hr_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized to update this job")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Not authorized to update this job"
+        )
 
     updates = data.model_dump(exclude_none=True)
     if updates:
@@ -109,7 +118,9 @@ async def delete_job(job_id: str, hr_id: str) -> dict:
     if not doc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Job not found")
     if doc["hr_id"] != hr_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized to delete this job")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Not authorized to delete this job"
+        )
 
     await col.delete_one({"_id": doc["_id"]})
     return {"message": "Job deleted successfully"}

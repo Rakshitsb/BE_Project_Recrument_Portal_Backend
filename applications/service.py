@@ -31,7 +31,7 @@ def _to_response(
     company_name: str | None = None,
     location: str | None = None,
     experience_years: float | None = None,
-    education: str | None = None,
+    education = None,   # str (legacy) or list[dict] (new)
     salary_range: str | None = None,
 ) -> ApplicationResponse:
     return ApplicationResponse(

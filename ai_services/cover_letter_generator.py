@@ -34,11 +34,20 @@ async def generate_cover_letter(candidate_profile: dict, job: dict) -> dict:
         company_name = hr_profile.get("company_name", "") if hr_profile else ""
         skills = ", ".join(candidate_profile.get("skills", []))
         required_skills = ", ".join(job.get("required_skills", []))
+        raw_ed = candidate_profile.get("education", "")
+        education_str = (
+            " | ".join(
+                ", ".join(filter(None, [e.get("degree"), e.get("institution"), e.get("year")]))
+                for e in raw_ed
+            )
+            if isinstance(raw_ed, list)
+            else str(raw_ed or "")
+        )
         user_message = f"""Candidate Profile:
 - Name: {candidate_profile.get("full_name", "")}
 - Skills: {skills}
 - Experience: {candidate_profile.get("experience_years", 0)} years
-- Education: {candidate_profile.get("education", "")}
+- Education: {education_str}
 - Bio: {candidate_profile.get("bio", "")}
 
 Job Details:

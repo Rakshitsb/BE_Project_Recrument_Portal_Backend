@@ -13,12 +13,10 @@ COLLECTION = "candidate_profiles"
 
 
 def _to_response(doc: dict) -> CandidateProfileResponse:
-    return CandidateProfileResponse(
-        id=str(doc["_id"]),
-        user_id=doc["user_id"],
-        created_at=doc["created_at"],
-        **{k: doc[k] for k in CandidateProfileCreate.model_fields},
-    )
+    # Build a clean dict from the whole document (exclude the raw ObjectId)
+    data = {k: v for k, v in doc.items() if k != "_id"}
+    data["id"] = str(doc["_id"])
+    return CandidateProfileResponse(**data)
 
 
 async def create_profile(user_id: str, data: CandidateProfileCreate) -> CandidateProfileResponse:

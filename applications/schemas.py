@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 from pydantic import BaseModel
 
 
@@ -32,7 +33,7 @@ class ApplicationResponse(BaseModel):
     company_name: str | None = None
     location: str | None = None
     experience_years: float | None = None
-    education: str | None = None
+    education: Any = None          # str (legacy) or list[dict] (new)
     salary_range: str | None = None
     cover_letter: str | None = None
     status: ApplicationStatus = ApplicationStatus.applied

@@ -31,16 +31,3 @@ async def response_detail(interview_id: str, response_id: str, current_user: dic
 @router.patch("/{response_id}/status", response_model=InterviewResponseOut)
 async def patch_status(response_id: str, data: ResponseStatusUpdate, current_user: dict = Depends(require_hr)) -> InterviewResponseOut:
     return await update_response_status(response_id, current_user["id"], data)
-<<<<<<< HEAD
-=======
-
-
-@router.get("/my/{interview_id}", response_model=CandidateResponseOut)
-async def my_response(interview_id: str, current_user: dict = Depends(require_candidate)) -> CandidateResponseOut:
-    return await get_my_response(interview_id, current_user["id"])
-
-
-@router.patch("/my/tab-switch/{call_id}", response_model=dict, status_code=200)
-async def patch_tab_switch(call_id: str, data: TabSwitchUpdate, current_user: dict = Depends(require_candidate)) -> dict:
-    return await record_tab_switch(call_id, current_user["id"], data)
->>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c

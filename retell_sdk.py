@@ -21,9 +21,11 @@ def _load_retell_class():
 
         entry_path = Path(entry).resolve()
 
-        # Skip the repository itself so we don't pick up the local retell package.
+        # Skip only the repository root itself so we don't pick up the local
+        # app package named `retell`. Do not skip nested virtualenv paths such
+        # as `/opt/render/project/src/.venv/.../site-packages`.
         try:
-            if entry_path == project_root or project_root in entry_path.parents:
+            if entry_path == project_root:
                 continue
         except Exception:
             continue

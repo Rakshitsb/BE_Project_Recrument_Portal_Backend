@@ -156,7 +156,6 @@ async def _to_response_list(docs: list[dict]) -> list[ApplicationResponse]:
             candidate_name=candidates_by_id.get(doc["candidate_id"]),
             candidate_email=candidate_emails.get(doc["candidate_id"]),
             company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
-            location=job_details_by_id.get(doc["job_id"], {}).get("location"),
             salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
             **candidate_profiles.get(doc["candidate_id"], {}),
         )
@@ -172,7 +171,6 @@ async def _to_response_single(doc: dict) -> ApplicationResponse:
         candidate_name=candidates_by_id.get(doc["candidate_id"]),
         candidate_email=candidate_emails.get(doc["candidate_id"]),
         company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
-        location=job_details_by_id.get(doc["job_id"], {}).get("location"),
         salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
         **candidate_profiles.get(doc["candidate_id"], {}),
     )

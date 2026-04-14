@@ -38,6 +38,7 @@ def _to_candidate(doc: dict) -> CandidateResponseOut:
     return CandidateResponseOut(id=str(doc["_id"]), interview_id=doc["interview_id"], call_id=doc["call_id"], name=doc.get("name"), duration=doc.get("duration"), analytics=_analytics(doc) if doc.get("is_analysed") else None, is_analysed=doc["is_analysed"], is_ended=doc["is_ended"], created_at=doc["created_at"])
 
 
+<<<<<<< HEAD
 async def maybe_backfill_response_analysis(doc: dict) -> dict:
     if not doc or not doc.get("is_ended") or doc.get("is_analysed"):
         return doc
@@ -102,12 +103,17 @@ async def maybe_backfill_response_analysis(doc: dict) -> dict:
     return updated or doc
 
 
+=======
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
 async def get_my_response(interview_id: str, candidate_id: str) -> CandidateResponseOut:
     db = get_database()
     doc = await db[INTERVIEW_RESPONSES].find_one({"interview_id": interview_id, "candidate_id": candidate_id, "is_ended": True})
     if not doc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No completed interview found")
+<<<<<<< HEAD
     doc = await maybe_backfill_response_analysis(doc)
+=======
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
     return _to_candidate(doc)
 
 

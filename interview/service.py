@@ -74,10 +74,16 @@ async def create_interview(
         {"_id": _oid(data.interviewer_id)}
     ):
         raise HTTPException(404, "Interviewer not found")
+<<<<<<< HEAD
     generation_context = _build_generation_context(job, data.context)
     ai = await generate_interview_questions(
         name=data.name, objective=data.objective,
         count=data.question_count, context=generation_context)
+=======
+    ai = await generate_interview_questions(
+        name=data.name, objective=data.objective,
+        count=data.question_count, context=data.context)
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
     now = datetime.now(timezone.utc)
     doc = {
         "interview_token": secrets.token_urlsafe(32),
@@ -90,7 +96,10 @@ async def create_interview(
         "questions": ai["questions"],
         "question_count": data.question_count,
         "time_duration": data.time_duration,
+<<<<<<< HEAD
         "context": data.context,
+=======
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
         "is_active": True, "is_archived": False,
         "response_count": 0,
         "created_at": now, "updated_at": now,

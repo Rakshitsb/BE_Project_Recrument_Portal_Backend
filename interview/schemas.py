@@ -62,7 +62,10 @@ class InterviewSummary(BaseModel):
     candidate_id: str
     name: str
     objective: str
+<<<<<<< HEAD
     context: str = ""
+=======
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
     description: str
     question_count: int
     time_duration: str

@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     RETELL_AGENT_ID_LISA: str = ""
     RETELL_AGENT_ID_BOB: str = ""
     BACKEND_URL: str = ""  # Backend public URL (used for Retell webhooks)
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    RETELL_API_KEY: str = ""
+    BASE_URL: str = "http://localhost:8000"
 
     model_config = SettingsConfigDict(
         env_file=".env",

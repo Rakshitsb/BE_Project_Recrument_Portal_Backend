@@ -48,6 +48,7 @@ async def update_interview(
     updates = data.model_dump(
         exclude_none=True,
         exclude={"regenerate_questions", "context"})
+<<<<<<< HEAD
     updates["context"] = data.context
     if data.regenerate_questions:
         name = data.name or doc["name"]
@@ -60,6 +61,14 @@ async def update_interview(
         ai = await generate_interview_questions(
             name=name, objective=objective,
             count=doc["question_count"], context=generation_context)
+=======
+    if data.regenerate_questions:
+        name = data.name or doc["name"]
+        objective = data.objective or doc["objective"]
+        ai = await generate_interview_questions(
+            name=name, objective=objective,
+            count=doc["question_count"], context=data.context)
+>>>>>>> 6cda33488b4bb35745a77d86bee4a45713de2e6c
         updates["questions"] = ai["questions"]
         updates["description"] = ai["description"]
     updates["updated_at"] = datetime.now(timezone.utc)

@@ -29,9 +29,11 @@ class ApplicationResponse(BaseModel):
     candidate_name: str | None = None
     candidate_email: str | None = None
     skills: list[str] = []
+    company_name: str | None = None
     location: str | None = None
     experience_years: float | None = None
     education: str | None = None
+    salary_range: str | None = None
     cover_letter: str | None = None
     status: ApplicationStatus = ApplicationStatus.applied
     created_at: datetime

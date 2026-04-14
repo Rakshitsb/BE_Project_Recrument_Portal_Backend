@@ -31,5 +31,8 @@ class JobResponse(JobCreate):
     id: str
     hr_id: str
     created_at: datetime
+    company_name: str | None = None
+    industry: str | None = None
+    company_size: str | None = None
 
     model_config = {"from_attributes": True}

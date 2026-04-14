@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from jobs.schemas import JobCreate, JobUpdate, JobResponse
 from jobs.service import create_job, get_all_jobs, get_job_by_id, update_job, delete_job
-from middleware.auth_guard import require_hr
+from middleware.auth_guard import require_hr, get_current_user_optional
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -16,7 +16,9 @@ async def create(
 
 
 @router.get("/", response_model=list[JobResponse])
-async def list_all() -> list[JobResponse]:
+async def list_all(current_user: dict | None = Depends(get_current_user_optional)) -> list[JobResponse]:
+    if current_user and current_user.get("role") == "hr":
+        return await get_all_jobs(hr_id=current_user["id"])
     return await get_all_jobs()
 
 

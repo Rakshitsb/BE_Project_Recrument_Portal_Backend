@@ -11,6 +11,7 @@ JOBS = "jobs"
 CANDIDATE_PROFILES = "candidate_profiles"
 WORKFLOW_ORDER = ["applied", "under_review", "shortlisted", "interview"]
 TERMINAL_STATUSES = {"selected", "rejected"}
+HR_PROFILES = "hr_profiles"
 
 
 def _oid(id_str: str) -> ObjectId:
@@ -27,9 +28,11 @@ def _to_response(
     candidate_name: str | None = None,
     candidate_email: str | None = None,
     skills: list[str] | None = None,
+    company_name: str | None = None,
     location: str | None = None,
     experience_years: float | None = None,
     education: str | None = None,
+    salary_range: str | None = None,
 ) -> ApplicationResponse:
     return ApplicationResponse(
         id=str(doc["_id"]),
@@ -39,9 +42,11 @@ def _to_response(
         candidate_name=candidate_name,
         candidate_email=candidate_email,
         skills=skills or [],
+        company_name=company_name,
         location=location,
         experience_years=experience_years,
         education=education,
+        salary_range=salary_range,
         cover_letter=doc.get("cover_letter"),
         status=doc["status"],
         created_at=doc["created_at"],
@@ -53,6 +58,7 @@ async def _build_enrichment_maps(
     docs: list[dict],
 ) -> tuple[
     dict[str, str | None],  # job_id -> title
+    dict[str, dict],        # job_id -> job details
     dict[str, str | None],  # candidate_id -> name
     dict[str, str | None],  # candidate_id -> email
     dict[str, dict],        # candidate_id -> profile fields
@@ -81,9 +87,16 @@ async def _build_enrichment_maps(
 
     # jobs
     jobs_by_id: dict[str, str | None] = {}
+    job_details_by_id: dict[str, dict] = {}
     if job_ids:
         async for job in db[JOBS].find({"_id": {"$in": job_ids}}):
-            jobs_by_id[str(job["_id"])] = job.get("title")
+            job_key = str(job["_id"])
+            jobs_by_id[job_key] = job.get("title")
+            job_details_by_id[job_key] = {
+                "location": job.get("location"),
+                "salary_range": job.get("salary_range"),
+                "hr_id": job.get("hr_id"),
+            }
 
     # candidate names from profiles
     candidates_by_id: dict[str, str | None] = {}
@@ -114,17 +127,37 @@ async def _build_enrichment_maps(
             async for user in db["users"].find({"_id": {"$in": user_object_ids}}):
                 candidate_emails[str(user["_id"])] = user.get("email")
 
-    return jobs_by_id, candidates_by_id, candidate_emails, candidate_profiles
+    hr_ids = []
+    seen_hr_ids: set = set()
+    for details in job_details_by_id.values():
+        hr_id = details.get("hr_id")
+        if hr_id and hr_id not in seen_hr_ids:
+            seen_hr_ids.add(hr_id)
+            hr_ids.append(hr_id)
+
+    hr_profiles: dict[str, dict] = {}
+    if hr_ids:
+        async for profile in db[HR_PROFILES].find({"user_id": {"$in": hr_ids}}):
+            hr_profiles[profile["user_id"]] = profile
+
+    for job_id, details in job_details_by_id.items():
+        hr_profile = hr_profiles.get(details.get("hr_id"))
+        details["company_name"] = hr_profile.get("company_name") if hr_profile else None
+
+    return jobs_by_id, job_details_by_id, candidates_by_id, candidate_emails, candidate_profiles
 
 
 async def _to_response_list(docs: list[dict]) -> list[ApplicationResponse]:
-    jobs_by_id, candidates_by_id, candidate_emails, candidate_profiles = await _build_enrichment_maps(docs)
+    jobs_by_id, job_details_by_id, candidates_by_id, candidate_emails, candidate_profiles = await _build_enrichment_maps(docs)
     return [
         _to_response(
             doc,
             job_title=jobs_by_id.get(doc["job_id"]),
             candidate_name=candidates_by_id.get(doc["candidate_id"]),
             candidate_email=candidate_emails.get(doc["candidate_id"]),
+            company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
+            location=job_details_by_id.get(doc["job_id"], {}).get("location"),
+            salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
             **candidate_profiles.get(doc["candidate_id"], {}),
         )
         for doc in docs
@@ -132,12 +165,15 @@ async def _to_response_list(docs: list[dict]) -> list[ApplicationResponse]:
 
 
 async def _to_response_single(doc: dict) -> ApplicationResponse:
-    jobs_by_id, candidates_by_id, candidate_emails, candidate_profiles = await _build_enrichment_maps([doc])
+    jobs_by_id, job_details_by_id, candidates_by_id, candidate_emails, candidate_profiles = await _build_enrichment_maps([doc])
     return _to_response(
         doc,
         job_title=jobs_by_id.get(doc["job_id"]),
         candidate_name=candidates_by_id.get(doc["candidate_id"]),
         candidate_email=candidate_emails.get(doc["candidate_id"]),
+        company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
+        location=job_details_by_id.get(doc["job_id"], {}).get("location"),
+        salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
         **candidate_profiles.get(doc["candidate_id"], {}),
     )
 

@@ -1,10 +1,10 @@
 import json
 import re
+from typing import Any
 
 from fastapi import HTTPException, status
 from groq import AsyncGroq
 
-from ai.schemas import ParsedJD
 from config import settings
 
 client = AsyncGroq(api_key=settings.GROQ_API_KEY)
@@ -13,30 +13,25 @@ MODEL = "llama-3.3-70b-versatile"
 JD_PARSER_PROMPT = """
 You are an expert job description parser.
 
-Extract and return ONLY valid JSON with this exact shape:
-{
-  "title": "string",
-  "summary": "string",
-  "responsibilities": ["string"],
-  "required_skills": ["string"],
-  "nice_to_have_skills": ["string"],
-  "experience_required": "string",
-  "education_required": "string",
-  "job_type": "string",
-  "location": "string",
-  "salary_range": "string",
-  "company_culture": "string",
-  "keywords": ["string"]
-}
+Extract the job description into structured JSON.
 
 Rules:
 - No preamble, no markdown, no backticks, no explanation
-- If a field is not found, use empty string or empty list
+- Return ONLY one valid JSON object
+- Use a dynamic structure based on the document; do not force a rigid schema
+- Include common hiring fields when available, such as title, summary, description,
+  responsibilities, required_skills, nice_to_have_skills, experience_required,
+  education_required, job_type, location, salary_range, company_culture, keywords
+- Preserve additional useful fields when present, such as department, benefits,
+  certifications, work_mode, shift, notice_period, industry, reporting_manager,
+  tools, languages, domain_experience, screening_questions, etc.
+- Use arrays for multi-value sections and nested objects when that is clearer
+- If a value is missing, prefer omitting the key rather than inventing data
 - Keywords should help semantic job matching and be max 20 items
 """
 
 
-async def parse_jd_with_groq(jd_text: str) -> ParsedJD:
+async def parse_jd_with_groq(jd_text: str) -> dict[str, Any]:
     try:
         completion = await client.chat.completions.create(
             model=MODEL,
@@ -54,9 +49,11 @@ async def parse_jd_with_groq(jd_text: str) -> ParsedJD:
         if match:
             raw = match.group(0)
         parsed = json.loads(raw)
+        if not isinstance(parsed, dict):
+            raise ValueError("Model returned non-object JSON")
         if isinstance(parsed.get("keywords"), list):
             parsed["keywords"] = parsed["keywords"][:20]
-        return ParsedJD(**parsed)
+        return parsed
     except (json.JSONDecodeError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

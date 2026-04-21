@@ -26,23 +26,18 @@ def _format_salary_range(value: str | None) -> str | None:
 
 
 def _to_response(doc: dict, hr_profile: dict | None = None) -> JobResponse:
-    return JobResponse(
-        id=str(doc["_id"]),
-        hr_id=doc["hr_id"],
-        created_at=doc["created_at"],
-        title=_clean_text(doc["title"]) or "",
-        description=_clean_text(doc["description"]) or "",
-        required_skills=[skill.strip() for skill in doc["required_skills"]],
-        location=_clean_text(doc["location"]) or "",
-        job_type=_clean_text(doc["job_type"]) or "",
-        experience_required=doc["experience_required"],
-        salary_range=_format_salary_range(doc.get("salary_range")),
-        cover_letter_required=doc["cover_letter_required"],
-        is_active=doc["is_active"],
-        company_name=hr_profile.get("company_name") if hr_profile else None,
-        industry=hr_profile.get("industry") if hr_profile else None,
-        company_size=hr_profile.get("company_size") if hr_profile else None,
-    )
+    data = {k: v for k, v in doc.items() if k != "_id"}
+    data["id"] = str(doc["_id"])
+    data["title"] = _clean_text(doc.get("title")) or ""
+    data["description"] = _clean_text(doc.get("description")) or ""
+    data["required_skills"] = [skill.strip() for skill in (doc.get("required_skills") or [])]
+    data["location"] = _clean_text(doc.get("location")) or ""
+    data["job_type"] = _clean_text(doc.get("job_type")) or ""
+    data["salary_range"] = _format_salary_range(doc.get("salary_range"))
+    data["company_name"] = hr_profile.get("company_name") if hr_profile else None
+    data["industry"] = hr_profile.get("industry") if hr_profile else None
+    data["company_size"] = hr_profile.get("company_size") if hr_profile else None
+    return JobResponse(**data)
 
 
 def _object_id(job_id: str) -> ObjectId:

@@ -1,27 +1,10 @@
-from pydantic import BaseModel, Field
+from typing import Any
 
-
-class JDParseRequest(BaseModel):
-    jd_text: str = Field(..., min_length=50)
-
-
-class ParsedJD(BaseModel):
-    title: str
-    summary: str
-    responsibilities: list[str]
-    required_skills: list[str]
-    nice_to_have_skills: list[str]
-    experience_required: str
-    education_required: str
-    job_type: str
-    location: str
-    salary_range: str
-    company_culture: str
-    keywords: list[str]
+from pydantic import BaseModel
 
 
 class JDParseResponse(BaseModel):
-    parsed_jd: ParsedJD
+    parsed_jd: dict[str, Any]
     raw_text: str
     model_used: str
 

@@ -1,4 +1,4 @@
-bcrypt==3.2.2
+bcrypt>=4.0.1
 fastapi
 groq
 httpx
@@ -15,3 +15,13 @@ python-jose[cryptography]
 python-multipart
 retell-sdk
 uvicorn
+
+# ── RAG Chatbot & Vector Store (added in v2.1.0) ──────────────────────────
+chromadb
+sentence-transformers==2.7.0
+torch==2.6.0
+# NOTE for Render free tier deployment (CPU-only, avoids large GPU build):
+#   pip install torch==2.6.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+# Or set in render.yaml:
+#   buildCommand: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+numpy>=2.0.0          # numpy 1.x has no Python 3.13 wheel; 2.x ships pre-built cp313 wheels

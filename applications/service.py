@@ -249,6 +249,21 @@ async def update_application_status(
         {"$set": {"status": data.status, "updated_at": datetime.now(timezone.utc)}},
         return_document=True,
     )
+
+    # --- Chatbot hook (non-blocking) ---
+    # Auto-enable chatbot on shortlist, auto-disable on rejection.
+    try:
+        from chatbot.hr_service import handle_application_status_hook
+        await handle_application_status_hook(
+            db=db,
+            job_id=str(app["job_id"]),
+            candidate_id=str(app["candidate_id"]),
+            hr_id=hr_id,
+            new_status=new_status,
+        )
+    except Exception:
+        pass  # never let chatbot hook break status update
+
     return await _to_response_single(updated)
 
 

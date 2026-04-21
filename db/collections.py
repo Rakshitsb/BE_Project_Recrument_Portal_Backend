@@ -13,6 +13,10 @@ INTERVIEWS = "interviews"
 INTERVIEW_RESPONSES = "interview_responses"
 INTERVIEW_FEEDBACK = "interview_feedback"
 
+# RAG / chatbot collections (added in Prompt 2)
+# MongoDB creates this lazily on first write — no migration needed.
+CHATBOT_SESSIONS = "chatbot_sessions"
+
 # MongoDB Document Schemas (Interview Bot)
 #
 # interviewers {

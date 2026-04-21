@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     RETELL_API_KEY: str = ""
     BASE_URL: str = "http://localhost:8000"
 
+    # Vector store / embedding settings (added in Prompt 2)
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    CHROMA_COLLECTION_NAME: str = "job_jds"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

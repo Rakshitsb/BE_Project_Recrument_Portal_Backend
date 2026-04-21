@@ -52,11 +52,12 @@ async def get_current_user(
 
 
 def _require_role(role: str):
+    """Role guard — comparison is case-insensitive so DB variants like 'HR' / 'Hr' work."""
     async def guard(current_user: dict = Depends(get_current_user)) -> dict:
-        if current_user["role"] != role:
+        if current_user["role"].lower() != role.lower():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access forbidden",
+                detail=f"Access forbidden: requires role '{role}', got '{current_user['role']}'",
             )
         return current_user
 
@@ -64,5 +65,5 @@ def _require_role(role: str):
 
 
 require_candidate = _require_role("candidate")
-require_hr = _require_role("hr")
-require_admin = _require_role("admin")
+require_hr        = _require_role("hr")
+require_admin     = _require_role("admin")

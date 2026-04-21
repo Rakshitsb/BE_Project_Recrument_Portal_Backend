@@ -35,6 +35,7 @@ class ChatSessionSummary(BaseModel):
 
     id: str
     job_id: str
+    job_title: Optional[str] = None
     is_enabled: bool
     enabled_at: Optional[datetime] = None
     message_count: int
@@ -85,10 +86,13 @@ class HRSessionListItem(BaseModel):
     """Lightweight session list item for HR's job-wide session view."""
 
     id: str
+    job_id: str
     candidate_id: str
     is_enabled: bool
     message_count: int
     updated_at: Optional[datetime] = None
+    candidate_name: Optional[str] = None
+    job_title: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

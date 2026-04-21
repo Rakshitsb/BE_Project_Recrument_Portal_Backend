@@ -26,17 +26,17 @@ _ELIGIBLE_STATUSES = {"shortlisted", "interview", "selected"}
 
 
 async def list_candidate_sessions(candidate_id: str) -> list[dict]:
-    """Return all enabled chatbot sessions for the logged-in candidate.
+    """Return all chatbot sessions for the logged-in candidate (enabled and disabled).
 
     Args:
         candidate_id: The authenticated candidate's user id (string).
 
     Returns:
-        List of ChatSessionSummary-compatible dicts.
+        List of ChatSessionSummary-compatible dicts, sorted by updated_at descending.
     """
     db = get_database()
     return await session_service.get_candidate_sessions(
-        db, candidate_id, only_enabled=True
+        db, candidate_id, only_enabled=False
     )
 
 

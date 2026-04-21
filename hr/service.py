@@ -21,8 +21,16 @@ async def create_profile(user_id: str, data: HRProfileCreate) -> HRProfileRespon
     db = get_database()
     col = db[COLLECTION]
 
-    if await col.find_one({"user_id": user_id}):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Profile already exists")
+    existing = await col.find_one({"user_id": user_id})
+    if existing:
+        # Profile already exists — update it in place (upsert behaviour)
+        updates = data.model_dump(exclude_none=True)
+        result = await col.find_one_and_update(
+            {"user_id": user_id},
+            {"$set": updates},
+            return_document=True,
+        )
+        return _to_response(result)
 
     doc = {"user_id": user_id, "created_at": datetime.now(timezone.utc), **data.model_dump()}
     result = await col.insert_one(doc)

@@ -37,7 +37,7 @@ async def generate_cover_letter(candidate_profile: dict, job: dict) -> dict:
         raw_ed = candidate_profile.get("education", "")
         education_str = (
             " | ".join(
-                ", ".join(filter(None, [e.get("degree"), e.get("institution"), e.get("year")]))
+                ", ".join(filter(None, [e.get("degree"), e.get("institution"), str(e.get("year")) if e.get("year") is not None else None]))
                 for e in raw_ed
             )
             if isinstance(raw_ed, list)

@@ -24,7 +24,7 @@ from typing import Any
 from nanoid import generate
 from pymongo import DESCENDING, ReturnDocument
 
-from db.collections import CHATBOT_SESSIONS
+from db.collections import CANDIDATE_PROFILES, CHATBOT_SESSIONS, JOBS
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -182,8 +182,11 @@ async def get_candidate_sessions(
         only_enabled: When ``True``, only return sessions where ``is_enabled=True``.
 
     Returns:
-        List of dicts: ``{id, job_id, is_enabled, enabled_at, message_count, updated_at}``.
+        List of dicts: ``{id, job_id, job_title, is_enabled, enabled_at, message_count, updated_at}``.
     """
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
     query: dict = {"candidate_id": candidate_id}
     if only_enabled:
         query["is_enabled"] = True
@@ -193,18 +196,43 @@ async def get_candidate_sessions(
         {"_id": 1, "job_id": 1, "is_enabled": 1, "enabled_at": 1, "updated_at": 1, "messages": 1},
     ).sort("updated_at", DESCENDING)
 
-    results: list[dict] = []
+    raw_sessions: list[dict] = []
     async for doc in cursor:
-        item = {
+        raw_sessions.append({
             "id": str(doc["_id"]),
             "job_id": doc.get("job_id", ""),
             "is_enabled": doc.get("is_enabled", False),
             "enabled_at": doc.get("enabled_at"),
             "message_count": len(doc.get("messages", [])),
             "updated_at": doc.get("updated_at"),
-        }
+        })
+
+    if not raw_sessions:
+        return []
+
+    # ── Batch-enrich with job titles ─────────────────────────────────────────
+    job_ids = list({s["job_id"] for s in raw_sessions if s["job_id"]})
+    job_title_map: dict[str, str] = {}
+    valid_oids: list[ObjectId] = []
+    for jid in job_ids:
+        try:
+            valid_oids.append(ObjectId(jid))
+        except (InvalidId, TypeError):
+            pass
+
+    if valid_oids:
+        async for jdoc in db[JOBS].find(
+            {"_id": {"$in": valid_oids}},
+            {"_id": 1, "title": 1},
+        ):
+            job_title_map[str(jdoc["_id"])] = jdoc.get("title", "")
+
+    results: list[dict] = []
+    for item in raw_sessions:
+        item["job_title"] = job_title_map.get(item["job_id"], "")
         results.append(item)
     return results
+
 
 
 async def get_hr_sessions(
@@ -213,8 +241,12 @@ async def get_hr_sessions(
     """List all chatbot sessions belonging to an HR user (optionally filtered by job).
 
     Returns:
-        List of dicts: ``{id, job_id, candidate_id, is_enabled, message_count, updated_at}``.
+        List of dicts: ``{id, job_id, candidate_id, is_enabled, message_count,
+                          updated_at, candidate_name, job_title}``.
     """
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
     query: dict = {"hr_id": hr_id}
     if job_id:
         query["job_id"] = job_id
@@ -224,18 +256,58 @@ async def get_hr_sessions(
         {"_id": 1, "job_id": 1, "candidate_id": 1, "is_enabled": 1, "updated_at": 1, "messages": 1},
     ).sort("updated_at", DESCENDING)
 
-    results: list[dict] = []
+    raw_sessions: list[dict] = []
     async for doc in cursor:
-        item = {
+        raw_sessions.append({
             "id": str(doc["_id"]),
             "job_id": doc.get("job_id", ""),
             "candidate_id": doc.get("candidate_id", ""),
             "is_enabled": doc.get("is_enabled", False),
             "message_count": len(doc.get("messages", [])),
             "updated_at": doc.get("updated_at"),
-        }
+        })
+
+    if not raw_sessions:
+        return []
+
+    # ── Batch-enrich with candidate names and job titles ──────────────────────
+
+    candidate_ids = list({s["candidate_id"] for s in raw_sessions if s["candidate_id"]})
+    job_ids = list({s["job_id"] for s in raw_sessions if s["job_id"]})
+
+    # Fetch candidate full_name keyed by user_id
+    candidate_name_map: dict[str, str] = {}
+    async for cdoc in db[CANDIDATE_PROFILES].find(
+        {"user_id": {"$in": candidate_ids}},
+        {"user_id": 1, "full_name": 1},
+    ):
+        candidate_name_map[cdoc["user_id"]] = cdoc.get("full_name", "")
+
+    # Fetch job title keyed by string _id
+    job_title_map: dict[str, str] = {}
+    valid_oids: list[ObjectId] = []
+    for jid in job_ids:
+        try:
+            valid_oids.append(ObjectId(jid))
+        except (InvalidId, TypeError):
+            pass
+
+    if valid_oids:
+        async for jdoc in db[JOBS].find(
+            {"_id": {"$in": valid_oids}},
+            {"_id": 1, "title": 1},
+        ):
+            job_title_map[str(jdoc["_id"])] = jdoc.get("title", "")
+
+    # Merge names/titles into result items
+    results: list[dict] = []
+    for item in raw_sessions:
+        item["candidate_name"] = candidate_name_map.get(item["candidate_id"], "")
+        item["job_title"] = job_title_map.get(item["job_id"], "")
         results.append(item)
+
     return results
+
 
 
 async def get_messages(db: Any, job_id: str, candidate_id: str) -> list[dict]:

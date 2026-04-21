@@ -1,12 +1,11 @@
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
-from passlib.context import CryptContext
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+from auth.utils import hash_password
 
 load_dotenv()
-pwd_context = CryptContext(schemes=["bcrypt"])
 
 
 async def seed_admin():
@@ -20,7 +19,7 @@ async def seed_admin():
         {
             "name": "Admin",
             "email": "admin@portal.com",
-            "hashed_password": pwd_context.hash("admin123"),
+            "hashed_password": hash_password("admin123"),
             "role": "admin",
             "created_at": datetime.utcnow(),
         }

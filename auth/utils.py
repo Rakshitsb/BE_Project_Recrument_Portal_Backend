@@ -8,14 +8,30 @@ from config import settings
 
 # --- Password hashing ---
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_BCRYPT_MAX_BYTES = 72
+
+
+def _password_too_long(password: str) -> bool:
+    return len(password.encode("utf-8")) > _BCRYPT_MAX_BYTES
 
 
 def hash_password(password: str) -> str:
+    if _password_too_long(password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be 72 bytes or fewer.",
+        )
     return _pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    if _password_too_long(plain):
+        return False
+
+    try:
+        return _pwd_context.verify(plain, hashed)
+    except ValueError:
+        return False
 
 
 # --- JWT ---

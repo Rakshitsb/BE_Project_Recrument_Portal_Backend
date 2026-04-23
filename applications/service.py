@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 
 from database import get_database
 from applications.schemas import ApplicationCreate, ApplicationStatusUpdate, ApplicationResponse
+from applications.ranking_service import get_ranked_candidates as _get_ranked_candidates
 
 APPS = "applications"
 JOBS = "jobs"
@@ -276,3 +277,7 @@ async def withdraw_application(app_id: str, candidate_id: str) -> dict:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized")
     await db[APPS].delete_one({"_id": app["_id"]})
     return {"message": "Application withdrawn successfully"}
+
+
+async def get_ranked_candidates(db, job_id: str, hr_id: str) -> dict:
+    return await _get_ranked_candidates(db, job_id, hr_id)

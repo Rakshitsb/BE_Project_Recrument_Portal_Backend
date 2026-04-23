@@ -94,11 +94,7 @@ async def match_job_route(
     request: MatchJobRequest,
     current_user: dict = Depends(require_candidate),
 ) -> MatchJobResponse:
-    """Score a candidate's profile against a specific job using skill matching.
-
-    Returns overlap score, matched/missing skills, and experience gap.
-    Scoring method will upgrade to SBERT embeddings in a future release.
-    """
+    """Score a candidate's profile against a job using embedding-based matching."""
     db = get_database()
     candidate_id = current_user["id"]
     return await get_match_result(db, candidate_id, request.job_id)

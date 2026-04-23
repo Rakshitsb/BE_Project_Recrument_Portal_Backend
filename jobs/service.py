@@ -1,13 +1,17 @@
+import json
+import logging
 from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import HTTPException, status
 
+from ai_services.vector_store import delete_job_embedding, upsert_job_embedding
 from database import get_database
 from jobs.schemas import JobCreate, JobUpdate, JobResponse
 
 COLLECTION = "jobs"
 HR_PROFILES = "hr_profiles"
+logger = logging.getLogger(__name__)
 
 
 def _clean_text(value: str | None) -> str | None:
@@ -47,6 +51,35 @@ def _object_id(job_id: str) -> ObjectId:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid job ID format")
 
 
+def _build_embedding_text(doc: dict) -> str:
+    raw_jd_text = _clean_text(doc.get("raw_jd_text"))
+    description = _clean_text(doc.get("description"))
+    title = _clean_text(doc.get("title")) or "Job Description"
+    jd_parsed = doc.get("jd_parsed")
+
+    parts: list[str] = [title]
+    if raw_jd_text:
+        parts.append(raw_jd_text)
+    if description and description != raw_jd_text:
+        parts.append(description)
+    if jd_parsed:
+        try:
+            parts.append(json.dumps(jd_parsed, ensure_ascii=False, sort_keys=True))
+        except TypeError:
+            logger.warning("Could not serialize jd_parsed for embedding generation")
+
+    text = "\n\n".join(part for part in parts if part)
+    return text.strip()
+
+
+async def _sync_job_embedding(db, job_id: str, doc: dict) -> None:
+    embedding_text = _build_embedding_text(doc)
+    if not embedding_text:
+        logger.warning("Skipping embedding generation for job %s because no JD text was available", job_id)
+        return
+    await upsert_job_embedding(db, job_id, embedding_text)
+
+
 async def create_job(hr_id: str, data: JobCreate) -> JobResponse:
     db = get_database()
     doc = {
@@ -56,6 +89,15 @@ async def create_job(hr_id: str, data: JobCreate) -> JobResponse:
     }
     result = await db[COLLECTION].insert_one(doc)
     doc["_id"] = result.inserted_id
+    try:
+        await _sync_job_embedding(db, str(result.inserted_id), doc)
+    except Exception as exc:
+        await db[COLLECTION].delete_one({"_id": result.inserted_id})
+        logger.exception("Failed to generate embedding for new job %s", result.inserted_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Job was not created because JD embedding generation failed.",
+        ) from exc
     hr_profile = await db[HR_PROFILES].find_one({"user_id": hr_id})
     return _to_response(doc, hr_profile=hr_profile)
 
@@ -101,6 +143,7 @@ async def update_job(job_id: str, hr_id: str, data: JobUpdate) -> JobResponse:
             {"$set": updates},
             return_document=True,
         )
+        await _sync_job_embedding(db, str(doc["_id"]), doc)
     hr_profile = await db[HR_PROFILES].find_one({"user_id": hr_id})
     return _to_response(doc, hr_profile=hr_profile)
 
@@ -118,4 +161,5 @@ async def delete_job(job_id: str, hr_id: str) -> dict:
         )
 
     await col.delete_one({"_id": doc["_id"]})
+    await delete_job_embedding(str(doc["_id"]))
     return {"message": "Job deleted successfully"}

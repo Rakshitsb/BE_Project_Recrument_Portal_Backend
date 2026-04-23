@@ -49,6 +49,13 @@ async def lifespan(app: FastAPI):
         # RAG chatbot will fall back to raw MongoDB JD text if ChromaDB is empty.
         print(f"[Startup] WARNING: ChromaDB rebuild failed: {e}")
 
+    try:
+        from ai_services.vector_store import build_candidate_collection
+        await build_candidate_collection(db)
+        print("[Startup] ChromaDB candidate profiles index rebuilt successfully.")
+    except Exception as e:
+        print(f"[Startup] WARNING: Candidate profiles index rebuild failed: {e}")
+
     yield
 
 

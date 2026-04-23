@@ -41,3 +41,26 @@ class ApplicationResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CandidateRankItem(BaseModel):
+    candidate_id: str
+    candidate_name: str
+    match_percentage: int
+    similarity_score: float
+    matched_skills: list[str] = []
+    missing_skills: list[str] = []
+    experience_gap: float
+    scoring_method: str
+    analysis_note: str | None = None
+    application_id: str
+    application_status: str
+
+
+class RankedCandidatesResponse(BaseModel):
+    job_id: str
+    job_title: str
+    total_applicants: int
+    ranked_candidates: list[CandidateRankItem] = []
+    scoring_method: str
+    note: str

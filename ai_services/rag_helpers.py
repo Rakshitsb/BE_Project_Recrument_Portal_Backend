@@ -21,14 +21,15 @@ logger = logging.getLogger(__name__)
 
 
 async def _fetch_job_with_hr(db: Any, job_id: str) -> dict:
-    """Fetch a job document and return title, hr_id, and jd_parsed.
+    """Fetch a job document and return title, hr_id, JD text, and jd_parsed.
 
     Args:
         db:     Motor async database instance.
         job_id: String form of the job's MongoDB ObjectId.
 
     Returns:
-        Dict with keys ``title``, ``hr_id``, ``jd_parsed``.
+        Dict with keys ``title``, ``hr_id``, ``description``, ``raw_jd_text``,
+        and ``jd_parsed``.
         Returns ``{}`` if not found or if job_id is an invalid ObjectId.
     """
     try:
@@ -39,7 +40,7 @@ async def _fetch_job_with_hr(db: Any, job_id: str) -> dict:
 
     doc = await db[JOBS].find_one(
         {"_id": oid},
-        {"title": 1, "hr_id": 1, "jd_parsed": 1},
+        {"title": 1, "hr_id": 1, "description": 1, "raw_jd_text": 1, "jd_parsed": 1},
     )
     if not doc:
         return {}
@@ -47,6 +48,8 @@ async def _fetch_job_with_hr(db: Any, job_id: str) -> dict:
     return {
         "title": doc.get("title", ""),
         "hr_id": doc.get("hr_id", ""),
+        "description": doc.get("description", ""),
+        "raw_jd_text": doc.get("raw_jd_text", ""),
         "jd_parsed": doc.get("jd_parsed"),  # may be None
     }
 

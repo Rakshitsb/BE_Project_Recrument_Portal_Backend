@@ -19,9 +19,7 @@ uvicorn
 # ── RAG Chatbot & Vector Store (added in v2.1.0) ──────────────────────────
 chromadb
 sentence-transformers==2.7.0
-torch==2.6.0
-# NOTE for Render free tier deployment (CPU-only, avoids large GPU build):
-#   pip install torch==2.6.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
-# Or set in render.yaml:
-#   buildCommand: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+# Render currently exposes newer CPU wheels, so avoid pinning an older Torch
+# version that may not exist for the selected Python runtime.
+torch>=2.9.0,<2.12.0
 numpy>=2.0.0          # numpy 1.x has no Python 3.13 wheel; 2.x ships pre-built cp313 wheels

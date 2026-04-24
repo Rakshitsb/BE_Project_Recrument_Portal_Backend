@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     CHROMA_COLLECTION_NAME: str = "job_jds"
     ENABLE_VECTOR_BOOTSTRAP: bool = False
+    ENABLE_EMBEDDING_SCORING: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

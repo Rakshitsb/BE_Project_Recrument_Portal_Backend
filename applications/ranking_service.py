@@ -5,6 +5,7 @@ from ai_services.skill_matcher import match_candidate_to_job
 from ai_services.ranking_insights import generate_candidate_match_insight
 from ai_services.vector_store import rank_candidates_for_job
 from applications.schemas import RankedCandidatesResponse
+from config import settings
 from db.collections import APPLICATIONS, CANDIDATE_PROFILES, JOBS
 
 
@@ -51,12 +52,22 @@ async def get_ranked_candidates(db, job_id: str, hr_id: str) -> dict:
             job_title=job.get("title", ""),
             total_applicants=0,
             ranked_candidates=[],
-            scoring_method="embedding",
-            note="Ranked by semantic similarity between candidate profile and job description",
+            scoring_method="embedding" if settings.ENABLE_EMBEDDING_SCORING else "keyword_overlap",
+            note=(
+                "Ranked by semantic similarity between candidate profile and job description"
+                if settings.ENABLE_EMBEDDING_SCORING
+                else "Ranked by required skill overlap and experience match"
+            ),
         ).model_dump()
 
     candidate_ids = [doc["candidate_id"] for doc in applications if doc.get("candidate_id")]
-    similarity_results = await rank_candidates_for_job(db, job_id, candidate_ids)
+    if settings.ENABLE_EMBEDDING_SCORING:
+        similarity_results = await rank_candidates_for_job(db, job_id, candidate_ids)
+    else:
+        similarity_results = [
+            {"candidate_id": candidate_id, "similarity_score": 0.0, "match_percentage": 0}
+            for candidate_id in candidate_ids
+        ]
     application_map = {doc["candidate_id"]: doc for doc in applications}
     ranked_candidates: list[dict] = []
 
@@ -101,6 +112,10 @@ async def get_ranked_candidates(db, job_id: str, hr_id: str) -> dict:
         job_title=job.get("title", ""),
         total_applicants=len(applications),
         ranked_candidates=ranked_candidates,
-        scoring_method="embedding",
-        note="Ranked by semantic similarity between candidate profile and job description",
+        scoring_method="embedding" if settings.ENABLE_EMBEDDING_SCORING else "keyword_overlap",
+        note=(
+            "Ranked by semantic similarity between candidate profile and job description"
+            if settings.ENABLE_EMBEDDING_SCORING
+            else "Ranked by required skill overlap and experience match"
+        ),
     ).model_dump()

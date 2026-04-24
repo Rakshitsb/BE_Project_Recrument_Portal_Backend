@@ -2,6 +2,7 @@ import logging
 from typing import TypedDict
 
 from ai_services.candidate_embeddings import build_candidate_profile_text
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -52,30 +53,31 @@ def match_candidate_to_job(candidate: dict, job: dict) -> SkillMatchResult:
     union = candidate_skills | required_skills
     jaccard_skill_score = len(matched) / len(union) if union else 0.0
     exp_score, experience_gap = _experience_score(candidate, job)
-    scoring_method = "embedding"
+    scoring_method = "keyword_overlap"
+    raw_score = (jaccard_skill_score * 0.70) + (exp_score * 0.30)
 
-    try:
-        import numpy as np
-        from ai_services.vector_store import get_embedding_for_text
+    if settings.ENABLE_EMBEDDING_SCORING:
+        try:
+            import numpy as np
+            from ai_services.vector_store import get_embedding_for_text
 
-        candidate_text = build_candidate_profile_text(candidate)
-        job_text = (
-            f"{job.get('title', '')}. {job.get('description', '')}. "
-            f"Required: {', '.join(sorted(required_skills))}"
-        )
-        emb_candidate = np.array(get_embedding_for_text(candidate_text))
-        emb_job = np.array(get_embedding_for_text(job_text))
-        norm_a = np.linalg.norm(emb_candidate)
-        norm_b = np.linalg.norm(emb_job)
-        semantic_score = 0.0
-        if norm_a and norm_b:
-            semantic_score = float(np.dot(emb_candidate, emb_job) / (norm_a * norm_b))
-            semantic_score = max(0.0, min(1.0, semantic_score))
-        raw_score = (semantic_score * 0.60) + (exp_score * 0.20) + (jaccard_skill_score * 0.20)
-    except Exception as exc:
-        logger.warning("[SkillMatcher] Embedding scoring failed: %s", exc)
-        raw_score = (jaccard_skill_score * 0.70) + (exp_score * 0.30)
-        scoring_method = "keyword_overlap"
+            candidate_text = build_candidate_profile_text(candidate)
+            job_text = (
+                f"{job.get('title', '')}. {job.get('description', '')}. "
+                f"Required: {', '.join(sorted(required_skills))}"
+            )
+            emb_candidate = np.array(get_embedding_for_text(candidate_text))
+            emb_job = np.array(get_embedding_for_text(job_text))
+            norm_a = np.linalg.norm(emb_candidate)
+            norm_b = np.linalg.norm(emb_job)
+            semantic_score = 0.0
+            if norm_a and norm_b:
+                semantic_score = float(np.dot(emb_candidate, emb_job) / (norm_a * norm_b))
+                semantic_score = max(0.0, min(1.0, semantic_score))
+            raw_score = (semantic_score * 0.60) + (exp_score * 0.20) + (jaccard_skill_score * 0.20)
+            scoring_method = "embedding"
+        except Exception as exc:
+            logger.warning("[SkillMatcher] Embedding scoring failed: %s", exc)
 
     return SkillMatchResult(
         score=round(min(max(raw_score, 0.0), 1.0), 4),

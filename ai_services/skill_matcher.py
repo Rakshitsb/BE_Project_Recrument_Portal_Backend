@@ -1,7 +1,7 @@
 import logging
 from typing import TypedDict
 
-from ai_services.vector_store import build_candidate_profile_text, get_embedding_for_text
+from ai_services.candidate_embeddings import build_candidate_profile_text
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ def match_candidate_to_job(candidate: dict, job: dict) -> SkillMatchResult:
 
     try:
         import numpy as np
+        from ai_services.vector_store import get_embedding_for_text
 
         candidate_text = build_candidate_profile_text(candidate)
         job_text = (

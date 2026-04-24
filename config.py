@@ -8,8 +8,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = ""
-    RETELL_API_KEY: str = ""
     RETELL_WEBHOOK_SECRET: str = ""
     RETELL_AGENT_ID_LISA: str = ""
     RETELL_AGENT_ID_BOB: str = ""
@@ -21,6 +19,7 @@ class Settings(BaseSettings):
     # Vector store / embedding settings (added in Prompt 2)
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     CHROMA_COLLECTION_NAME: str = "job_jds"
+    ENABLE_VECTOR_BOOTSTRAP: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_candidate_collection():
-    from ai_services.vector_store import _client
-    return _client.get_or_create_collection("candidate_profiles")
+    from ai_services.vector_store import get_chroma_client
+
+    return get_chroma_client().get_or_create_collection("candidate_profiles")
 
 
 def _education_summary(education: Any) -> str:

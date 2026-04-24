@@ -1,6 +1,3 @@
-import json
-import re
-
 from groq import AsyncGroq
 from fastapi import HTTPException, status
 
@@ -8,7 +5,7 @@ from config import settings
 from database import get_database
 
 client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-MODEL = "llama-3.3-70b-versatile"
+MODEL = settings.GROQ_MODEL
 
 PROMPT = """You are an expert cover letter writer.
 
@@ -29,9 +26,11 @@ Rules:
 
 async def generate_cover_letter(candidate_profile: dict, job: dict) -> dict:
     try:
-        db = get_database()
-        hr_profile = await db["hr_profiles"].find_one({"user_id": job.get("hr_id")})
-        company_name = hr_profile.get("company_name", "") if hr_profile else ""
+        company_name = str(job.get("company_name") or "").strip()
+        if not company_name and job.get("hr_id"):
+            db = get_database()
+            hr_profile = await db["hr_profiles"].find_one({"user_id": job.get("hr_id")})
+            company_name = hr_profile.get("company_name", "") if hr_profile else ""
         skills = ", ".join(candidate_profile.get("skills", []))
         required_skills = ", ".join(job.get("required_skills", []))
         raw_ed = candidate_profile.get("education", "")

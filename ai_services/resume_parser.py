@@ -8,7 +8,7 @@ from config import settings
 
 client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = settings.GROQ_MODEL
 
 PROMPT = """
 You are an expert resume parser.

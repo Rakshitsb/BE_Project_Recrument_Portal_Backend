@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HRProfileCreate(BaseModel):
@@ -31,3 +31,35 @@ class HRProfileResponse(HRProfileCreate):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class HRDashboardStats(BaseModel):
+    total_jobs_posted: int = 0
+    active_jobs: int = 0
+    total_applicants: int = 0
+    positions_filled: int = 0
+
+
+class HRDashboardJob(BaseModel):
+    id: str
+    title: str
+    is_active: bool = True
+    applicants: int = 0
+    created_at: datetime
+
+
+class HRDashboardApplication(BaseModel):
+    id: str
+    job_id: str
+    candidate_id: str
+    job_title: str | None = None
+    candidate_name: str | None = None
+    candidate_email: str | None = None
+    status: str
+    created_at: datetime
+
+
+class HRDashboardResponse(BaseModel):
+    stats: HRDashboardStats
+    jobs: list[HRDashboardJob] = Field(default_factory=list)
+    recent_applicants: list[HRDashboardApplication] = Field(default_factory=list)

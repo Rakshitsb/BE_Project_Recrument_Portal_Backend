@@ -1,10 +1,22 @@
 from fastapi import APIRouter, Depends
 
-from hr.schemas import HRProfileCreate, HRProfileUpdate, HRProfileResponse
-from hr.service import create_profile, get_profile, update_profile, delete_profile
+from hr.schemas import (
+    HRDashboardResponse,
+    HRProfileCreate,
+    HRProfileResponse,
+    HRProfileUpdate,
+)
+from hr.service import create_profile, delete_profile, get_dashboard, get_profile, update_profile
 from middleware.auth_guard import require_hr
 
 router = APIRouter(prefix="/hr", tags=["HR"])
+
+
+@router.get("/dashboard", response_model=HRDashboardResponse)
+async def dashboard(
+    current_user: dict = Depends(require_hr),
+) -> HRDashboardResponse:
+    return await get_dashboard(current_user["id"])
 
 
 @router.post("/profile", response_model=HRProfileResponse, status_code=201)

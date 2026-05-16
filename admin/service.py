@@ -34,14 +34,81 @@ def _clean(doc: dict) -> dict:
 
 async def get_all_candidates() -> list[dict]:
     db = get_database()
-    cursor = db[USERS].find({"role": "candidate"}, _NO_PW)
-    return [_clean(doc) async for doc in cursor]
+    users = [doc async for doc in db[USERS].find({"role": "candidate"}, _NO_PW)]
+    if not users:
+        return []
+
+    user_ids = [str(user["_id"]) for user in users]
+
+    profiles: dict[str, dict] = {}
+    async for profile in db[CANDIDATE_PROFILES].find({"user_id": {"$in": user_ids}}):
+        profiles[profile["user_id"]] = profile
+
+    application_counts: dict[str, int] = {}
+    pipeline = [
+        {"$group": {"_id": "$candidate_id", "count": {"$sum": 1}}},
+    ]
+    async for item in db[APPLICATIONS].aggregate(pipeline):
+        application_counts[str(item["_id"])] = item["count"]
+
+    candidates = []
+    for user in users:
+        candidate = _clean(user)
+        profile = profiles.get(candidate["id"], {})
+
+        candidate["full_name"] = profile.get("full_name") or candidate.get("name")
+        candidate["phone"] = profile.get("phone")
+        candidate["location"] = profile.get("location")
+        candidate["skills"] = profile.get("skills") or []
+        candidate["experience_years"] = profile.get("experience_years", 0)
+        candidate["education"] = profile.get("education")
+        candidate["bio"] = profile.get("bio")
+        candidate["created_at"] = profile.get("created_at") or candidate.get("created_at")
+        candidate["total_applications"] = application_counts.get(candidate["id"], 0)
+        candidate["status"] = "active"
+        candidates.append(candidate)
+
+    return candidates
 
 
 async def get_all_hrs() -> list[dict]:
     db = get_database()
-    cursor = db[USERS].find({"role": "hr"}, _NO_PW)
-    return [_clean(doc) async for doc in cursor]
+    users = [doc async for doc in db[USERS].find({"role": "hr"}, _NO_PW)]
+    if not users:
+        return []
+
+    user_ids = [str(user["_id"]) for user in users]
+
+    profiles: dict[str, dict] = {}
+    async for profile in db[HR_PROFILES].find({"user_id": {"$in": user_ids}}):
+        profiles[profile["user_id"]] = profile
+
+    job_counts: dict[str, int] = {}
+    pipeline = [
+        {"$group": {"_id": "$hr_id", "count": {"$sum": 1}}},
+    ]
+    async for item in db[JOBS].aggregate(pipeline):
+        job_counts[str(item["_id"])] = item["count"]
+
+    hrs = []
+    for user in users:
+        hr = _clean(user)
+        profile = profiles.get(hr["id"], {})
+
+        hr["full_name"] = profile.get("full_name") or hr.get("name")
+        hr["phone"] = profile.get("phone")
+        hr["designation"] = profile.get("designation")
+        hr["company_name"] = profile.get("company_name")
+        hr["company_location"] = profile.get("company_location")
+        hr["industry"] = profile.get("industry")
+        hr["company_size"] = profile.get("company_size")
+        hr["company_website"] = profile.get("company_website")
+        hr["created_at"] = profile.get("created_at") or hr.get("created_at")
+        hr["total_jobs_posted"] = job_counts.get(hr["id"], 0)
+        hr["status"] = "active"
+        hrs.append(hr)
+
+    return hrs
 
 
 async def get_all_jobs() -> list[dict]:

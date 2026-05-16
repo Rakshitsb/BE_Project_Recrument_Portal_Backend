@@ -42,5 +42,6 @@ class JobResponse(JobCreate):
     company_name: str | None = None
     industry: str | None = None
     company_size: str | None = None
+    applicants: int = 0
 
     model_config = {"extra": "allow", "from_attributes": True}

@@ -11,6 +11,7 @@ from jobs.schemas import JobCreate, JobUpdate, JobResponse
 
 COLLECTION = "jobs"
 HR_PROFILES = "hr_profiles"
+APPLICATIONS = "applications"
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +42,7 @@ def _to_response(doc: dict, hr_profile: dict | None = None) -> JobResponse:
     data["company_name"] = hr_profile.get("company_name") if hr_profile else None
     data["industry"] = hr_profile.get("industry") if hr_profile else None
     data["company_size"] = hr_profile.get("company_size") if hr_profile else None
+    data["applicants"] = doc.get("applicants", 0)
     return JobResponse(**data)
 
 
@@ -116,6 +118,7 @@ async def get_all_jobs(hr_id: str | None = None) -> list[JobResponse]:
     cursor = db[COLLECTION].find(query)
     responses = []
     async for doc in cursor:
+        doc["applicants"] = await db[APPLICATIONS].count_documents({"job_id": str(doc["_id"])})
         hr_profile = await db[HR_PROFILES].find_one({"user_id": doc["hr_id"]})
         responses.append(_to_response(doc, hr_profile=hr_profile))
     return responses
@@ -126,6 +129,7 @@ async def get_job_by_id(job_id: str) -> JobResponse:
     doc = await db[COLLECTION].find_one({"_id": _object_id(job_id)})
     if not doc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Job not found")
+    doc["applicants"] = await db[APPLICATIONS].count_documents({"job_id": str(doc["_id"])})
     hr_profile = await db[HR_PROFILES].find_one({"user_id": doc["hr_id"]})
     return _to_response(doc, hr_profile=hr_profile)
 

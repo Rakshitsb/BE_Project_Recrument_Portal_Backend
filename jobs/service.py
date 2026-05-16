@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException, status
 
-from ai_services.vector_store import delete_job_embedding, upsert_job_embedding
+from config import settings
 from database import get_database
 from jobs.schemas import JobCreate, JobUpdate, JobResponse
 
@@ -73,10 +73,16 @@ def _build_embedding_text(doc: dict) -> str:
 
 
 async def _sync_job_embedding(db, job_id: str, doc: dict) -> None:
+    if not settings.ENABLE_EMBEDDING_SCORING:
+        logger.info("Skipping embedding generation for job %s because embedding scoring is disabled", job_id)
+        return
+
     embedding_text = _build_embedding_text(doc)
     if not embedding_text:
         logger.warning("Skipping embedding generation for job %s because no JD text was available", job_id)
         return
+    from ai_services.vector_store import upsert_job_embedding
+
     await upsert_job_embedding(db, job_id, embedding_text)
 
 
@@ -161,5 +167,8 @@ async def delete_job(job_id: str, hr_id: str) -> dict:
         )
 
     await col.delete_one({"_id": doc["_id"]})
-    await delete_job_embedding(str(doc["_id"]))
+    if settings.ENABLE_EMBEDDING_SCORING:
+        from ai_services.vector_store import delete_job_embedding
+
+        await delete_job_embedding(str(doc["_id"]))
     return {"message": "Job deleted successfully"}

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 
 from database import get_database
+from config import settings
 from candidate.schemas import (
     CandidateProfileCreate,
     CandidateProfileUpdate,
@@ -29,13 +30,14 @@ async def create_profile(user_id: str, data: CandidateProfileCreate) -> Candidat
     doc = {"user_id": user_id, "created_at": datetime.now(timezone.utc), **data.model_dump()}
     result = await col.insert_one(doc)
     doc["_id"] = result.inserted_id
-    try:
-        import asyncio
-        from ai_services.vector_store import upsert_candidate_embedding
+    if settings.ENABLE_EMBEDDING_SCORING:
+        try:
+            import asyncio
+            from ai_services.vector_store import upsert_candidate_embedding
 
-        asyncio.create_task(upsert_candidate_embedding(db, user_id))
-    except Exception:
-        pass
+            asyncio.create_task(upsert_candidate_embedding(db, user_id))
+        except Exception:
+            pass
     return _to_response(doc)
 
 
@@ -62,13 +64,14 @@ async def update_profile(user_id: str, data: CandidateProfileUpdate) -> Candidat
     )
     if not result:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Profile not found")
-    try:
-        import asyncio
-        from ai_services.vector_store import upsert_candidate_embedding
+    if settings.ENABLE_EMBEDDING_SCORING:
+        try:
+            import asyncio
+            from ai_services.vector_store import upsert_candidate_embedding
 
-        asyncio.create_task(upsert_candidate_embedding(db, user_id))
-    except Exception:
-        pass
+            asyncio.create_task(upsert_candidate_embedding(db, user_id))
+        except Exception:
+            pass
     return _to_response(result)
 
 

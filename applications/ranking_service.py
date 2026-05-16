@@ -3,7 +3,6 @@ from fastapi import HTTPException, status
 
 from ai_services.skill_matcher import match_candidate_to_job
 from ai_services.ranking_insights import generate_candidate_match_insight
-from ai_services.vector_store import rank_candidates_for_job
 from applications.schemas import RankedCandidatesResponse
 from config import settings
 from db.collections import APPLICATIONS, CANDIDATE_PROFILES, JOBS
@@ -62,6 +61,8 @@ async def get_ranked_candidates(db, job_id: str, hr_id: str) -> dict:
 
     candidate_ids = [doc["candidate_id"] for doc in applications if doc.get("candidate_id")]
     if settings.ENABLE_EMBEDDING_SCORING:
+        from ai_services.vector_store import rank_candidates_for_job
+
         similarity_results = await rank_candidates_for_job(db, job_id, candidate_ids)
     else:
         similarity_results = [

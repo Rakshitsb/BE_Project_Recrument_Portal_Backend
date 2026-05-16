@@ -3,7 +3,7 @@ import asyncio
 from bson import ObjectId
 from fastapi import HTTPException, status
 
-from ai_services.vector_store import delete_job_embedding
+from config import settings
 from database import get_database
 from db.collections import (
     APPLICATIONS,
@@ -117,8 +117,11 @@ async def delete_hr(user_id: str) -> dict:
         await db[APPLICATIONS].delete_many({"job_id": {"$in": job_ids}})
         await db[CHATBOT_SESSIONS].delete_many({"job_id": {"$in": job_ids}})
 
-        # Remove in-memory vector entries for each deleted HR job.
-        await asyncio.gather(*(delete_job_embedding(job_id) for job_id in job_ids))
+        if settings.ENABLE_EMBEDDING_SCORING:
+            from ai_services.vector_store import delete_job_embedding
+
+            # Remove in-memory vector entries for each deleted HR job.
+            await asyncio.gather(*(delete_job_embedding(job_id) for job_id in job_ids))
 
     # Also remove any remaining chatbot sessions directly tied to the HR.
     await db[CHATBOT_SESSIONS].delete_many({"hr_id": user_id})

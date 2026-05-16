@@ -6,7 +6,7 @@ from fastapi import HTTPException
 
 from database import get_database
 from db.collections import (
-    APPLICATIONS, INTERVIEWS, INTERVIEWERS, JOBS,
+    APPLICATIONS, CANDIDATE_PROFILES, INTERVIEWS, INTERVIEWERS, JOBS,
 )
 from interview.schemas import (
     InterviewCreate, InterviewResponse, InterviewSummary,
@@ -19,6 +19,14 @@ def _oid(id_str: str) -> ObjectId:
         return ObjectId(id_str)
     except Exception:
         raise HTTPException(400, "Invalid ID format")
+
+
+async def _attach_candidate_avatar(doc: dict) -> dict:
+    db = get_database()
+    profile = await db[CANDIDATE_PROFILES].find_one({"user_id": doc.get("candidate_id")})
+    if profile:
+        doc["candidate_avatar_url"] = profile.get("avatar_url") or profile.get("profile_image", {}).get("url")
+    return doc
 
 
 def _to_response(doc: dict) -> InterviewResponse:
@@ -100,4 +108,4 @@ async def create_interview(
     await db[APPLICATIONS].update_one(
         {"_id": _oid(data.application_id)},
         {"$set": {"status": "interview", "updated_at": now}})
-    return _to_response(doc)
+    return _to_response(await _attach_candidate_avatar(doc))

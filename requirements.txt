@@ -15,6 +15,7 @@ python-jose[cryptography]
 python-multipart
 retell-sdk
 uvicorn
+cloudinary
 
 # ── RAG Chatbot & Vector Store (added in v2.1.0) ──────────────────────────
 chromadb

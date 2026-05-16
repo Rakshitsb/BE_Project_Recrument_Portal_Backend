@@ -12,6 +12,9 @@ class HRProfileCreate(BaseModel):
     company_location: str
     industry: str
     company_size: str
+    avatar_url: str | None = None
+    avatar_public_id: str | None = None
+    profile_image: dict | None = None
 
 
 class HRProfileUpdate(BaseModel):
@@ -23,6 +26,9 @@ class HRProfileUpdate(BaseModel):
     company_location: Optional[str] = None
     industry: Optional[str] = None
     company_size: Optional[str] = None
+    avatar_url: Optional[str] = None
+    avatar_public_id: Optional[str] = None
+    profile_image: Optional[dict] = None
 
 
 class HRProfileResponse(HRProfileCreate):
@@ -55,6 +61,7 @@ class HRDashboardApplication(BaseModel):
     job_title: str | None = None
     candidate_name: str | None = None
     candidate_email: str | None = None
+    candidate_avatar_url: str | None = None
     status: str
     created_at: datetime
 

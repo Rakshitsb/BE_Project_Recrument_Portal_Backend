@@ -26,7 +26,7 @@ def _to_response(doc: dict) -> HRProfileResponse:
         id=str(doc["_id"]),
         user_id=doc["user_id"],
         created_at=doc["created_at"],
-        **{k: doc[k] for k in HRProfileCreate.model_fields},
+        **{k: doc.get(k) for k in HRProfileCreate.model_fields},
     )
 
 
@@ -175,6 +175,7 @@ async def get_dashboard(user_id: str) -> HRDashboardResponse:
                 job_title=job.get("title"),
                 candidate_name=profile.get("full_name") or user.get("name") or user.get("email"),
                 candidate_email=user.get("email"),
+                candidate_avatar_url=profile.get("avatar_url") or profile.get("profile_image", {}).get("url"),
                 status=_status_value(doc.get("status")),
                 created_at=doc["created_at"],
             )

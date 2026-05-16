@@ -29,8 +29,10 @@ class ApplicationResponse(BaseModel):
     job_title: str | None = None
     candidate_name: str | None = None
     candidate_email: str | None = None
+    candidate_avatar_url: str | None = None
     skills: list[str] = []
     company_name: str | None = None
+    company_logo_url: str | None = None
     location: str | None = None
     experience_years: float | None = None
     education: Any = None          # str (legacy) or list[dict] (new)

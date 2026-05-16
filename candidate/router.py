@@ -1,10 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from candidate.schemas import CandidateProfileCreate, CandidateProfileUpdate, CandidateProfileResponse
 from candidate.service import create_profile, get_profile, update_profile, delete_profile
 from middleware.auth_guard import require_candidate
+from uploads.schemas import ProfileImageResponse
+from uploads.service import upload_profile_image
 
 router = APIRouter(prefix="/candidate", tags=["Candidate"])
+
+
+@router.post("/avatar", response_model=ProfileImageResponse)
+async def upload_avatar(
+    avatar: UploadFile = File(...),
+    current_user: dict = Depends(require_candidate),
+) -> ProfileImageResponse:
+    return await upload_profile_image(current_user["id"], "candidate", avatar)
 
 
 @router.post("/profile", response_model=CandidateProfileResponse, status_code=201)

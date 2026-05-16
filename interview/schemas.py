@@ -36,6 +36,7 @@ class InterviewResponse(BaseModel):
     job_id: str
     hr_id: str
     candidate_id: str
+    candidate_avatar_url: str | None = None
     interviewer_id: str
     name: str
     objective: str
@@ -60,6 +61,7 @@ class InterviewSummary(BaseModel):
     job_id: str
     hr_id: str
     candidate_id: str
+    candidate_avatar_url: str | None = None
     name: str
     objective: str
     context: str = ""

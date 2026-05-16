@@ -28,8 +28,10 @@ def _to_response(
     job_title: str | None = None,
     candidate_name: str | None = None,
     candidate_email: str | None = None,
+    candidate_avatar_url: str | None = None,
     skills: list[str] | None = None,
     company_name: str | None = None,
+    company_logo_url: str | None = None,
     location: str | None = None,
     experience_years: float | None = None,
     education = None,   # str (legacy) or list[dict] (new)
@@ -42,8 +44,10 @@ def _to_response(
         job_title=job_title,
         candidate_name=candidate_name,
         candidate_email=candidate_email,
+        candidate_avatar_url=candidate_avatar_url,
         skills=skills or [],
         company_name=company_name,
+        company_logo_url=company_logo_url,
         location=location,
         experience_years=experience_years,
         education=education,
@@ -112,6 +116,7 @@ async def _build_enrichment_maps(
                 "location": profile.get("location"),
                 "experience_years": profile.get("experience_years"),
                 "education": profile.get("education"),
+                "candidate_avatar_url": profile.get("avatar_url") or profile.get("profile_image", {}).get("url"),
             }
 
     # candidate emails from users collection
@@ -144,6 +149,10 @@ async def _build_enrichment_maps(
     for job_id, details in job_details_by_id.items():
         hr_profile = hr_profiles.get(details.get("hr_id"))
         details["company_name"] = hr_profile.get("company_name") if hr_profile else None
+        details["company_logo_url"] = (
+            hr_profile.get("avatar_url") or hr_profile.get("profile_image", {}).get("url")
+            if hr_profile else None
+        )
 
     return jobs_by_id, job_details_by_id, candidates_by_id, candidate_emails, candidate_profiles
 
@@ -157,6 +166,7 @@ async def _to_response_list(docs: list[dict]) -> list[ApplicationResponse]:
             candidate_name=candidates_by_id.get(doc["candidate_id"]),
             candidate_email=candidate_emails.get(doc["candidate_id"]),
             company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
+            company_logo_url=job_details_by_id.get(doc["job_id"], {}).get("company_logo_url"),
             salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
             **candidate_profiles.get(doc["candidate_id"], {}),
         )
@@ -172,6 +182,7 @@ async def _to_response_single(doc: dict) -> ApplicationResponse:
         candidate_name=candidates_by_id.get(doc["candidate_id"]),
         candidate_email=candidate_emails.get(doc["candidate_id"]),
         company_name=job_details_by_id.get(doc["job_id"], {}).get("company_name"),
+        company_logo_url=job_details_by_id.get(doc["job_id"], {}).get("company_logo_url"),
         salary_range=job_details_by_id.get(doc["job_id"], {}).get("salary_range"),
         **candidate_profiles.get(doc["candidate_id"], {}),
     )

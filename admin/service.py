@@ -63,6 +63,7 @@ async def get_all_candidates() -> list[dict]:
         candidate["experience_years"] = profile.get("experience_years", 0)
         candidate["education"] = profile.get("education")
         candidate["bio"] = profile.get("bio")
+        candidate["avatar_url"] = profile.get("avatar_url") or profile.get("profile_image", {}).get("url")
         candidate["created_at"] = profile.get("created_at") or candidate.get("created_at")
         candidate["total_applications"] = application_counts.get(candidate["id"], 0)
         candidate["status"] = "active"
@@ -103,6 +104,7 @@ async def get_all_hrs() -> list[dict]:
         hr["industry"] = profile.get("industry")
         hr["company_size"] = profile.get("company_size")
         hr["company_website"] = profile.get("company_website")
+        hr["avatar_url"] = profile.get("avatar_url") or profile.get("profile_image", {}).get("url")
         hr["created_at"] = profile.get("created_at") or hr.get("created_at")
         hr["total_jobs_posted"] = job_counts.get(hr["id"], 0)
         hr["status"] = "active"
@@ -150,6 +152,7 @@ async def get_all_jobs() -> list[dict]:
         user = hr_users.get(hr_id, {})
 
         job["company_name"] = profile.get("company_name")
+        job["company_logo_url"] = profile.get("avatar_url") or profile.get("profile_image", {}).get("url")
         job["hr_name"] = profile.get("full_name") or user.get("name") or user.get("email")
         job["applicants"] = applicant_counts.get(job["id"], 0)
         jobs.append(job)
@@ -238,7 +241,11 @@ async def get_all_applications() -> list[dict]:
             or candidate_user.get("email")
         )
         application["candidate_email"] = candidate_user.get("email")
+        application["candidate_avatar_url"] = (
+            candidate_profile.get("avatar_url") or candidate_profile.get("profile_image", {}).get("url")
+        )
         application["company_name"] = hr_profile.get("company_name")
+        application["company_logo_url"] = hr_profile.get("avatar_url") or hr_profile.get("profile_image", {}).get("url")
         application["hr_name"] = (
             hr_profile.get("full_name")
             or hr_user.get("name")

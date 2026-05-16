@@ -26,6 +26,7 @@ class MessageOut(BaseModel):
     content: str
     timestamp: datetime
     modal_payload: Optional[dict] = None
+    avatar_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -36,6 +37,8 @@ class ChatSessionSummary(BaseModel):
     id: str
     job_id: str
     job_title: Optional[str] = None
+    company_name: Optional[str] = None
+    company_logo_url: Optional[str] = None
     is_enabled: bool
     enabled_at: Optional[datetime] = None
     message_count: int
@@ -92,6 +95,7 @@ class HRSessionListItem(BaseModel):
     message_count: int
     updated_at: Optional[datetime] = None
     candidate_name: Optional[str] = None
+    candidate_avatar_url: Optional[str] = None
     job_title: Optional[str] = None
 
     model_config = {"from_attributes": True}
@@ -103,6 +107,8 @@ class HRSessionDetail(BaseModel):
     id: str
     job_id: str
     candidate_id: str
+    candidate_name: Optional[str] = None
+    candidate_avatar_url: Optional[str] = None
     is_enabled: bool
     messages: list[MessageOut] = []
     enabled_at: Optional[datetime] = None

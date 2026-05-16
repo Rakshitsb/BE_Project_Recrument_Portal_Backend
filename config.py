@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     RETELL_API_KEY: str = ""
     BASE_URL: str = "http://localhost:8000"
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    PROFILE_IMAGE_MAX_BYTES: int = 2_000_000
 
     # Vector store / embedding settings (added in Prompt 2)
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"

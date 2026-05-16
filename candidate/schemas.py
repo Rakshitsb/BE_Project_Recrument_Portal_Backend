@@ -15,6 +15,9 @@ class CandidateProfileCreate(BaseModel):
     experience: Optional[list[dict]] = None
     projects: Optional[list[dict]] = None
     resume_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    avatar_public_id: Optional[str] = None
+    profile_image: Optional[dict] = None
     bio: Optional[str] = None
 
     # Allow any extra fields (e.g. gender, dob, certifications) to pass
@@ -32,6 +35,9 @@ class CandidateProfileUpdate(BaseModel):
     experience: Optional[list[dict]] = None
     projects: Optional[list[dict]] = None
     resume_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    avatar_public_id: Optional[str] = None
+    profile_image: Optional[dict] = None
     bio: Optional[str] = None
 
     model_config = {"extra": "allow"}
@@ -49,6 +55,9 @@ class CandidateProfileResponse(BaseModel):
     experience: Optional[list[dict]] = None
     projects: Optional[list[dict]] = None
     resume_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    avatar_public_id: Optional[str] = None
+    profile_image: Optional[dict] = None
     bio: Optional[str] = None
     created_at: datetime
 

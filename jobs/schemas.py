@@ -40,6 +40,7 @@ class JobResponse(JobCreate):
     hr_id: str
     created_at: datetime
     company_name: str | None = None
+    company_logo_url: str | None = None
     industry: str | None = None
     company_size: str | None = None
     applicants: int = 0

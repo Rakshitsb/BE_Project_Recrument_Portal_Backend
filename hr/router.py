@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from hr.schemas import (
     HRDashboardResponse,
@@ -8,8 +8,18 @@ from hr.schemas import (
 )
 from hr.service import create_profile, delete_profile, get_dashboard, get_profile, update_profile
 from middleware.auth_guard import require_hr
+from uploads.schemas import ProfileImageResponse
+from uploads.service import upload_profile_image
 
 router = APIRouter(prefix="/hr", tags=["HR"])
+
+
+@router.post("/avatar", response_model=ProfileImageResponse)
+async def upload_avatar(
+    avatar: UploadFile = File(...),
+    current_user: dict = Depends(require_hr),
+) -> ProfileImageResponse:
+    return await upload_profile_image(current_user["id"], "hr", avatar)
 
 
 @router.get("/dashboard", response_model=HRDashboardResponse)

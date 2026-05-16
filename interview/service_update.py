@@ -8,7 +8,7 @@ from db.collections import INTERVIEWS, JOBS
 from interview.schemas import (
     InterviewResponse, InterviewSummary, InterviewUpdate,
 )
-from interview.service import _build_generation_context, _oid, _to_response, _to_summary
+from interview.service import _attach_candidate_avatar, _build_generation_context, _oid, _to_response, _to_summary
 from ai_services.interview_engine import generate_interview_questions
 
 
@@ -22,7 +22,7 @@ async def get_interview_by_id(
         raise HTTPException(404, "Interview not found")
     if doc["hr_id"] != hr_id:
         raise HTTPException(403, "Not authorized")
-    return _to_response(doc)
+    return _to_response(await _attach_candidate_avatar(doc))
 
 
 async def list_interviews_by_hr(
@@ -32,7 +32,7 @@ async def list_interviews_by_hr(
     cursor = db[INTERVIEWS].find(
         {"hr_id": hr_id, "is_archived": False}
     ).sort("created_at", -1)
-    return [_to_summary(doc) async for doc in cursor]
+    return [_to_summary(await _attach_candidate_avatar(doc)) async for doc in cursor]
 
 
 async def update_interview(
@@ -66,7 +66,7 @@ async def update_interview(
     updated = await db[INTERVIEWS].find_one_and_update(
         {"_id": doc["_id"]}, {"$set": updates},
         return_document=True)
-    return _to_response(updated)
+    return _to_response(await _attach_candidate_avatar(updated))
 
 
 async def delete_interview(

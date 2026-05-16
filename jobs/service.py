@@ -40,6 +40,10 @@ def _to_response(doc: dict, hr_profile: dict | None = None) -> JobResponse:
     data["job_type"] = _clean_text(doc.get("job_type")) or ""
     data["salary_range"] = _format_salary_range(doc.get("salary_range"))
     data["company_name"] = hr_profile.get("company_name") if hr_profile else None
+    data["company_logo_url"] = (
+        hr_profile.get("avatar_url") or hr_profile.get("profile_image", {}).get("url")
+        if hr_profile else None
+    )
     data["industry"] = hr_profile.get("industry") if hr_profile else None
     data["company_size"] = hr_profile.get("company_size") if hr_profile else None
     data["applicants"] = doc.get("applicants", 0)

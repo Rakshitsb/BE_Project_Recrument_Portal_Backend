@@ -24,7 +24,7 @@ from typing import Any
 from nanoid import generate
 from pymongo import DESCENDING, ReturnDocument
 
-from db.collections import CANDIDATE_PROFILES, CHATBOT_SESSIONS, JOBS
+from db.collections import CANDIDATE_PROFILES, CHATBOT_SESSIONS, JOBS, HR_PROFILES
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -213,6 +213,7 @@ async def get_candidate_sessions(
     # ── Batch-enrich with job titles ─────────────────────────────────────────
     job_ids = list({s["job_id"] for s in raw_sessions if s["job_id"]})
     job_title_map: dict[str, str] = {}
+    job_company_map: dict[str, dict] = {}
     valid_oids: list[ObjectId] = []
     for jid in job_ids:
         try:
@@ -221,15 +222,25 @@ async def get_candidate_sessions(
             pass
 
     if valid_oids:
-        async for jdoc in db[JOBS].find(
-            {"_id": {"$in": valid_oids}},
-            {"_id": 1, "title": 1},
-        ):
+        hr_ids = []
+        async for jdoc in db[JOBS].find({"_id": {"$in": valid_oids}}, {"_id": 1, "title": 1, "hr_id": 1}):
             job_title_map[str(jdoc["_id"])] = jdoc.get("title", "")
+            job_company_map[str(jdoc["_id"])] = {"hr_id": jdoc.get("hr_id")}
+            if jdoc.get("hr_id"):
+                hr_ids.append(jdoc.get("hr_id"))
+        hr_profiles = {}
+        if hr_ids:
+            async for hdoc in db[HR_PROFILES].find({"user_id": {"$in": list(set(hr_ids))}}):
+                hr_profiles[hdoc["user_id"]] = hdoc
+        for jid, info in job_company_map.items():
+            profile = hr_profiles.get(info.get("hr_id"), {})
+            info["company_name"] = profile.get("company_name")
+            info["company_logo_url"] = profile.get("avatar_url") or profile.get("profile_image", {}).get("url")
 
     results: list[dict] = []
     for item in raw_sessions:
         item["job_title"] = job_title_map.get(item["job_id"], "")
+        item.update(job_company_map.get(item["job_id"], {}))
         results.append(item)
     return results
 
@@ -277,11 +288,13 @@ async def get_hr_sessions(
 
     # Fetch candidate full_name keyed by user_id
     candidate_name_map: dict[str, str] = {}
+    candidate_avatar_map: dict[str, str] = {}
     async for cdoc in db[CANDIDATE_PROFILES].find(
         {"user_id": {"$in": candidate_ids}},
-        {"user_id": 1, "full_name": 1},
+        {"user_id": 1, "full_name": 1, "avatar_url": 1, "profile_image": 1},
     ):
         candidate_name_map[cdoc["user_id"]] = cdoc.get("full_name", "")
+        candidate_avatar_map[cdoc["user_id"]] = cdoc.get("avatar_url") or cdoc.get("profile_image", {}).get("url")
 
     # Fetch job title keyed by string _id
     job_title_map: dict[str, str] = {}
@@ -303,6 +316,7 @@ async def get_hr_sessions(
     results: list[dict] = []
     for item in raw_sessions:
         item["candidate_name"] = candidate_name_map.get(item["candidate_id"], "")
+        item["candidate_avatar_url"] = candidate_avatar_map.get(item["candidate_id"], "")
         item["job_title"] = job_title_map.get(item["job_id"], "")
         results.append(item)
 

@@ -46,14 +46,142 @@ async def get_all_hrs() -> list[dict]:
 
 async def get_all_jobs() -> list[dict]:
     db = get_database()
-    cursor = db[JOBS].find()
-    return [_clean(doc) async for doc in cursor]
+    docs = [doc async for doc in db[JOBS].find()]
+    if not docs:
+        return []
+
+    hr_ids = sorted({doc.get("hr_id") for doc in docs if doc.get("hr_id")})
+
+    hr_profiles: dict[str, dict] = {}
+    if hr_ids:
+        async for profile in db[HR_PROFILES].find({"user_id": {"$in": hr_ids}}):
+            hr_profiles[profile["user_id"]] = profile
+
+    hr_users: dict[str, dict] = {}
+    user_object_ids = []
+    for hr_id in hr_ids:
+        try:
+            user_object_ids.append(ObjectId(hr_id))
+        except Exception:
+            pass
+    if user_object_ids:
+        async for user in db[USERS].find({"_id": {"$in": user_object_ids}}, _NO_PW):
+            hr_users[str(user["_id"])] = user
+
+    applicant_counts: dict[str, int] = {}
+    pipeline = [
+        {"$group": {"_id": "$job_id", "count": {"$sum": 1}}},
+    ]
+    async for item in db[APPLICATIONS].aggregate(pipeline):
+        applicant_counts[str(item["_id"])] = item["count"]
+
+    jobs = []
+    for doc in docs:
+        job = _clean(doc)
+        hr_id = job.get("hr_id")
+        profile = hr_profiles.get(hr_id, {})
+        user = hr_users.get(hr_id, {})
+
+        job["company_name"] = profile.get("company_name")
+        job["hr_name"] = profile.get("full_name") or user.get("name") or user.get("email")
+        job["applicants"] = applicant_counts.get(job["id"], 0)
+        jobs.append(job)
+
+    return jobs
 
 
 async def get_all_applications() -> list[dict]:
     db = get_database()
-    cursor = db[APPLICATIONS].find()
-    return [_clean(doc) async for doc in cursor]
+    docs = [doc async for doc in db[APPLICATIONS].find()]
+    if not docs:
+        return []
+
+    job_object_ids = []
+    candidate_object_ids = []
+    candidate_ids = []
+    seen_job_ids: set[str] = set()
+    seen_candidate_ids: set[str] = set()
+
+    for doc in docs:
+        job_id = doc.get("job_id")
+        candidate_id = doc.get("candidate_id")
+
+        if job_id and job_id not in seen_job_ids:
+            seen_job_ids.add(job_id)
+            try:
+                job_object_ids.append(ObjectId(job_id))
+            except Exception:
+                pass
+
+        if candidate_id and candidate_id not in seen_candidate_ids:
+            seen_candidate_ids.add(candidate_id)
+            candidate_ids.append(candidate_id)
+            try:
+                candidate_object_ids.append(ObjectId(candidate_id))
+            except Exception:
+                pass
+
+    jobs_by_id: dict[str, dict] = {}
+    if job_object_ids:
+        async for job in db[JOBS].find({"_id": {"$in": job_object_ids}}):
+            jobs_by_id[str(job["_id"])] = job
+
+    candidate_profiles: dict[str, dict] = {}
+    if candidate_ids:
+        async for profile in db[CANDIDATE_PROFILES].find({"user_id": {"$in": candidate_ids}}):
+            candidate_profiles[profile["user_id"]] = profile
+
+    candidate_users: dict[str, dict] = {}
+    if candidate_object_ids:
+        async for user in db[USERS].find({"_id": {"$in": candidate_object_ids}}, _NO_PW):
+            candidate_users[str(user["_id"])] = user
+
+    hr_ids = sorted({job.get("hr_id") for job in jobs_by_id.values() if job.get("hr_id")})
+
+    hr_profiles: dict[str, dict] = {}
+    if hr_ids:
+        async for profile in db[HR_PROFILES].find({"user_id": {"$in": hr_ids}}):
+            hr_profiles[profile["user_id"]] = profile
+
+    hr_users: dict[str, dict] = {}
+    hr_object_ids = []
+    for hr_id in hr_ids:
+        try:
+            hr_object_ids.append(ObjectId(hr_id))
+        except Exception:
+            pass
+    if hr_object_ids:
+        async for user in db[USERS].find({"_id": {"$in": hr_object_ids}}, _NO_PW):
+            hr_users[str(user["_id"])] = user
+
+    applications = []
+    for doc in docs:
+        application = _clean(doc)
+        job = jobs_by_id.get(application.get("job_id"), {})
+        candidate_profile = candidate_profiles.get(application.get("candidate_id"), {})
+        candidate_user = candidate_users.get(application.get("candidate_id"), {})
+        hr_id = job.get("hr_id")
+        hr_profile = hr_profiles.get(hr_id, {})
+        hr_user = hr_users.get(hr_id, {})
+
+        application["job_title"] = job.get("title")
+        application["candidate_name"] = (
+            candidate_profile.get("full_name")
+            or candidate_user.get("name")
+            or candidate_user.get("email")
+        )
+        application["candidate_email"] = candidate_user.get("email")
+        application["company_name"] = hr_profile.get("company_name")
+        application["hr_name"] = (
+            hr_profile.get("full_name")
+            or hr_user.get("name")
+            or hr_user.get("email")
+        )
+        application["experience_years"] = candidate_profile.get("experience_years")
+        application["location"] = candidate_profile.get("location") or job.get("location")
+        applications.append(application)
+
+    return applications
 
 
 async def delete_candidate(user_id: str) -> dict:

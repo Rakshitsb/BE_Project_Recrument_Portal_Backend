@@ -104,7 +104,10 @@ async def maybe_backfill_response_analysis(doc: dict) -> dict:
 
 async def get_my_response(interview_id: str, candidate_id: str) -> CandidateResponseOut:
     db = get_database()
-    doc = await db[INTERVIEW_RESPONSES].find_one({"interview_id": interview_id, "candidate_id": candidate_id, "is_ended": True})
+    doc = await db[INTERVIEW_RESPONSES].find_one(
+        {"interview_id": interview_id, "candidate_id": candidate_id, "is_ended": True},
+        sort=[("created_at", -1)],
+    )
     if not doc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No completed interview found")
     doc = await maybe_backfill_response_analysis(doc)

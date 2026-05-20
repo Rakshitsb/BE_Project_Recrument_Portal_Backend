@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from database import get_database
-from db.collections import INTERVIEWS, JOBS
+from db.collections import INTERVIEWS, INTERVIEW_RESPONSES, JOBS
 from interview.schemas import (
     InterviewResponse, InterviewSummary, InterviewUpdate,
 )
@@ -62,10 +62,20 @@ async def update_interview(
             count=doc["question_count"], context=generation_context)
         updates["questions"] = ai["questions"]
         updates["description"] = ai["description"]
+        updates["is_active"] = True
     updates["updated_at"] = datetime.now(timezone.utc)
     updated = await db[INTERVIEWS].find_one_and_update(
         {"_id": doc["_id"]}, {"$set": updates},
         return_document=True)
+    if data.regenerate_questions:
+        await db[INTERVIEW_RESPONSES].update_many(
+            {
+                "interview_id": str(doc["_id"]),
+                "candidate_id": doc["candidate_id"],
+                "is_ended": False,
+            },
+            {"$set": {"is_ended": True, "updated_at": updates["updated_at"]}},
+        )
     return _to_response(await _attach_candidate_avatar(updated))
 
 
